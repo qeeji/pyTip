@@ -1,0 +1,177 @@
+#https://medium.com/@nicholasRodgers
+
+
+
+import maya.cmds as cmds
+import time, datetime
+import os
+import platform
+
+# Are we running Windows or something else?
+# Define the desktop path
+if platform.system() == "Windows":
+    DESKTOP_PATH = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop') 
+else:
+    DESKTOP_PATH = os.path.join(os.path.join(os.path.expanduser('~')), 'Desktop') 
+
+# Creat the global variables
+
+# The filepath of the text file we're making (makes a different one with the date on the end)
+TABLE_PATH = "%s/TimeLogging_%s.txt" % (DESKTOP_PATH, time.strftime("%Y%m%d"))
+
+# The currently opened scene (stored so we know if the scene has changed when you open a new file)
+CURRENT_SCENE = None
+
+# The logging table is a dictionary which will store all the data
+LOGGING_TABLE = {}
+
+
+class SceneEntry:
+    """
+    A small class that stores all the information needed for an log entry
+    """
+    def __init__(self):
+        self.sceneName = cmds.file(query=True,sn=True)
+        self.loggedTimes = []
+        self.timeOpened = time.time()
+        self.timeClosed = None
+    
+    def _sceneClosed(self):
+        """
+        This function gets called when a scene is closed
+        It stops the timer and then adds the opened and closed time to the loggedTimes list
+        """
+        self.timeClosed = time.time()
+        self.loggedTimes.append([self.timeOpened, self.timeClosed])
+        self.timeOpened = None
+        self.timeClosed = None
+        
+
+def readLoggingTable():
+    """
+    Reads the data from an existing logging table text file
+    """
+    global LOGGING_TABLE
+
+    with open(TABLE_PATH, "r") as tableFile:
+        startReading = False
+        for line in tableFile.readlines():
+            if startReading:
+                splitLine = line.split(";")
+                newEntry = SceneEntry()
+                newEntry.sceneName = splitLine[0]
+                
+                newEntry.timeOpened = eval(splitLine[1])
+                newEntry.timeClosed = eval(splitLine[2])
+                newEntry.loggedTimes = eval(splitLine[3])
+
+                LOGGING_TABLE[newEntry.sceneName] = newEntry
+
+            if "//DATA//" in line:
+                startReading = True
+
+# If there's an existing table file, load it in
+if os.path.isfile(TABLE_PATH):
+    print "Reading Existing Logging Table..." + TABLE_PATH
+    readLoggingTable()
+
+
+def convertTimeStampToString(timestamp):
+    """
+    Tiny function to format the date
+    """
+    return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    
+        
+def logTime(quittingMaya=False):
+    """
+    This function gets called when someone opens a file or quits Maya
+    It logs the data in the main table and writes it out to the file
+    """
+   
+    global LOGGING_TABLE
+    global CURRENT_SCENE
+    
+    # Get the path of the scene you just opened
+    sceneName = cmds.file(query=True,sn=True)
+    if CURRENT_SCENE is None:
+        CURRENT_SCENE = sceneName
+        
+    # If the scene name has changed since from the last scene you opened, flag that
+    sceneChanged = False
+    if not sceneName == CURRENT_SCENE:
+        sceneChanged = True
+    
+    # If there's no entry in the table for this file path
+    if not sceneName in LOGGING_TABLE.keys():
+        # Make an entry. The timer starts automatically
+        print "Creating new entry for " + sceneName
+        LOGGING_TABLE[sceneName] = SceneEntry()
+    else:
+        # If there's an existing entry for the new scene, reset the timer
+        sceneEntry = LOGGING_TABLE[sceneName]
+        sceneEntry.timeOpened = time.time()
+        print "Adding new entry to " + sceneName
+
+    # And scene has changed or if you're shutting down Maya
+    if sceneChanged or quittingMaya:
+        #Finish the timer for the scene you just closed
+        previousSceneEntry = LOGGING_TABLE[CURRENT_SCENE]
+        previousSceneEntry._sceneClosed()
+        print "Stopping logging timer for " + CURRENT_SCENE
+        
+        # Write out the logging table
+        writeLoggingTable()
+                
+    # Update the current scene global  
+    CURRENT_SCENE = sceneName
+
+
+def writeLoggingTable():
+    global LOGGING_TABLE
+    print "Writing to " + TABLE_PATH
+    
+    # Open a file to write into
+    with open(TABLE_PATH, "w") as tableFile:
+        # Go through every file in the logging table in alphabetical order
+        for path in sorted(LOGGING_TABLE.keys()):
+            # Get the entry data from it
+            entry = LOGGING_TABLE[path]
+            if path == "":
+                path = "(Empty Scene)"
+            
+            # Write the path name out
+            tableFile.write(path + "\n")
+            tableFile.write(("=" * len(path)) + "\n" )
+            
+            totalTime = 0
+            
+            # For all the logged times, write them out and tally up the total time spent
+            for loggedTimes in entry.loggedTimes:
+                entryLine = "- Opened @: " + convertTimeStampToString(loggedTimes[0]) + " Closed @:" + convertTimeStampToString(loggedTimes[1]) + "\n"
+                tableFile.write(entryLine)
+                
+                totalTime += (loggedTimes[1] - loggedTimes[0])
+            
+            # Convert the total time spend from seconds to hours, minutes and seconds
+            m, s = divmod(totalTime, 60)
+            h, m = divmod(m, 60)        
+            totalTimeString = "%d:%02d:%02d" % (h, m, s)
+            
+            # And write that to the log file
+            tableFile.write("\nTotal time spent on scene today: %s\n\n" % totalTimeString)
+
+        # Write out the raw data so it can be read back in on a new Maya session
+        tableFile.write("\n\n//DATA//\n")
+        for path in sorted(LOGGING_TABLE.keys()):
+            entry = LOGGING_TABLE[path]
+            tableFile.write("%s;%s;%s;%s\n" % (entry.sceneName, entry.timeOpened, entry.timeClosed, str(entry.loggedTimes)))
+
+    
+# Register Callbacks    
+cmds.scriptJob(event=["SceneOpened", logTime])
+cmds.scriptJob(event=["quitApplication", lambda:logTime(quittingMaya=True)])
+
+# Open one logging entry at startup to get it going 
+print "Starting Time Logger"
+logTime()
