@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+ 
+#system imports
+import sys
+ 
+#pyqt imports
+from PyQt4 import QtCore,QtGui
+from PyQt4.QtCore import Qt
+ 
+class MainWindow(QtGui.QWidget):
+    def __init__(self):
+ 
+        QtGui.QWidget.__init__(self)
+ 
+        #初始化position
+        self.m_DragPosition=self.pos()
+        #screen = QtGui.QDesktopWidget().screenGeometry()
+        #self.resize(screen.width(), screen.height()) 
+        #self.resize(1280,800)
+        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setStyleSheet("background-color:#2C3E50;")
+ 
+        #按钮一
+        qbtn_one=QtGui.QPushButton(u"开始测试",self)
+        qbtn_one.setGeometry(400,360,120,80)
+        qbtn_one.setStyleSheet("QPushButton{background-color:#16A085;border:none;color:#ffffff;font-size:20px;}"
+                               "QPushButton:hover{background-color:#333333;}")
+ 
+        qbtn_close=QtGui.QPushButton(u"关闭此窗口",self)
+        qbtn_close.setGeometry(600,360,120,80)
+        qbtn_close.setStyleSheet("QPushButton{background-color:#D35400;border:none;color:#ffffff;font-size:20px;}"
+                                 "QPushButton:hover{background-color:#333333;}")
+ 
+        self.showFullScreen()    #全屏显示必须放在所有组件画完以后执行
+        #注册事件
+        self.connect(qbtn_one,QtCore.SIGNAL("clicked()"),QtGui.qApp,QtCore.SLOT("quit()"))
+        self.connect(qbtn_close,QtCore.SIGNAL("clicked()"),QtGui.qApp,QtCore.SLOT("quit()"))
+ 
+ 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_A:
+            self.showFullScreen()
+        if event.key() == QtCore.Qt.Key_Escape:
+            self.showNormal()
+ 
+if __name__=="__main__":
+ 
+    mapp=QtGui.QApplication(sys.argv)
+    mw=MainWindow()
+    mw.show()
+    sys.exit(mapp.exec_())
