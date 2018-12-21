@@ -1,23 +1,20 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import QMovie
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtGui import QMovie
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(517, 361)
-        self.label = QtWidgets.QLabel(Form)
-        self.label.setGeometry(QtCore.QRect(0, 0, 500, 300))
-        self.label.setObjectName("label")
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
- 
-    def retranslateUi(self, Form):
-        _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Form"))
-self.gif = QMovie('qq.gif')
-self.label.setMovie(self.gif)
-self.gif.start()
+class gifLabel(QtWidgets.QLable):
+    def __init__(self, parent = None):
+        self.setGeometry(QtCore.QRect(0, 0, 500, 300))
+        self.setObjectName("label")
+    def start(self , gifFile):
+        self.gif = QMovie(gifFile)
+        self.setMovie(self.gif)
+        self.gif.start()
+    def stop(self):
+        self.gif.stop()
 
+##player = gifLabel()
+##player.play('../...gif')
+##player.stop()
 
 
 ### example 2
