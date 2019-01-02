@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import partial
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PySide2 import QtWidgets, QtGui, QtCore
 
 
 class GripItem(QtWidgets.QGraphicsPathItem):
@@ -149,14 +149,14 @@ class AnnotationView(QtWidgets.QGraphicsView):
         super(AnnotationView, self).__init__(parent)
         self.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
         self.setMouseTracking(True)
-        QtWidgets.QShortcut(QtGui.QKeySequence.ZoomIn, self, activated=self.zoomIn)
-        QtWidgets.QShortcut(QtGui.QKeySequence.ZoomOut, self, activated=self.zoomOut)
+        QtWidgets.QShortcut(QtGui.QKeySequence.ZoomIn, self, self.zoomIn)
+        QtWidgets.QShortcut(QtGui.QKeySequence.ZoomOut, self, self.zoomOut)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def zoomIn(self):
         self.zoom(AnnotationView.factor)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def zoomOut(self):
         self.zoom(1 / AnnotationView.factor)
 
@@ -176,7 +176,7 @@ class AnnotationWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.m_view)
         self.create_menus()
 
-        QtWidgets.QShortcut(QtCore.Qt.Key_Escape, self, activated=partial(self.m_scene.setCurrentInstruction, Instructions.No_Instruction))
+        QtWidgets.QShortcut(QtGui.QKeySequence(Qt.Key_Escape), self, activated=partial(self.m_scene.setCurrentInstruction, Instructions.No_Instruction))
 
     def create_menus(self):
         menu_file = self.menuBar().addMenu("File")
@@ -187,7 +187,7 @@ class AnnotationWindow(QtWidgets.QMainWindow):
         polygon_action = menu_instructions.addAction("Polygon")
         polygon_action.triggered.connect(partial(self.m_scene.setCurrentInstruction, Instructions.Polygon_Instruction))
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def load_image(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, 
             "Open Image",
@@ -200,10 +200,8 @@ class AnnotationWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == '__main__':
-    import sys
 
-    app = QtWidgets.QApplication(sys.argv)
     w = AnnotationWindow()
     w.resize(640, 480)
     w.show()
-    sys.exit(app.exec_())
+
